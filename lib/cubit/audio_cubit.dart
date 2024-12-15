@@ -1,115 +1,86 @@
 import 'dart:io';
+import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bloc/bloc.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:learn_quran/cubit/audio_state.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
-import 'audio_state.dart';
 
 class AudioCubit extends Cubit<AudioState> {
-  final AudioRecorder _recorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _filePath;
-  double _currentPosition = 0;
-  double _totalDuration = 0;
+  late final RecorderController recorderController;
+  late final PlayerController playerController;
+  String? path;
+  bool isRecording = false;
 
-  AudioCubit() : super(AudioInitial());
+  AudioCubit() : super(AudioInitial()) {
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    recorderController = RecorderController()
+      ..androidEncoder = AndroidEncoder.aac
+      ..androidOutputFormat = AndroidOutputFormat.mpeg4
+      ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
+      ..sampleRate = 44100;
+
+    playerController = PlayerController();
+  }
 
   /// Start recording audio
   Future<void> startRecording() async {
     try {
-      final bool isPermissionGranted = await _recorder.hasPermission();
-      if (!isPermissionGranted) {
-        emit(AudioError('Permission not granted'));
-        return;
-      }
-
       final directory = await getApplicationDocumentsDirectory();
-      String fileName = 'recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      _filePath = '${directory.path}/$fileName';
+      path = "${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
 
-      const config = RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        sampleRate: 44100,
-        bitRate: 128000,
-      );
-
-      await _recorder.start(config, path: _filePath!);
+      await recorderController.record(path: path);
+      isRecording = true;
       emit(AudioRecording());
     } catch (e) {
-      emit(AudioError(e.toString()));
+      emit(AudioError('Failed to start recording: $e'));
     }
   }
 
   /// Stop recording audio
   Future<void> stopRecording() async {
     try {
-      await _recorder.stop();
-      emit(AudioStopped());
+      await recorderController.stop();
+      isRecording = false;
+      emit(AudioStopped(filePath: path));
     } catch (e) {
-      emit(AudioError(e.toString()));
+      emit(AudioError('Failed to stop recording: $e'));
     }
   }
 
   /// Play recorded audio
+  bool _isPlaying = false;  // Playback holatini saqlash uchun private variable
+
+// AudioCubit.dart
   Future<void> playRecording() async {
-    if (_filePath != null) {
+    if (path != null && File(path!).existsSync()) {
       try {
-        await _audioPlayer.setFilePath(_filePath!);
+        await playerController.preparePlayer(path: path!);
+        await playerController.startPlayer();
 
-        // Get the total duration
-        _totalDuration = _audioPlayer.duration?.inSeconds.toDouble() ?? 0;
-        await _audioPlayer.play();
+        _isPlaying = true;
+        emit(AudioPlaying());  // UI-ni yangilash
 
-        emit(AudioPlaying());
-
-        // Continuously update the current position
-        _audioPlayer.positionStream.listen((position) {
-          _currentPosition = position.inSeconds.toDouble();
-          emit(AudioPlayingPositionUpdated(_currentPosition));
+        playerController.addListener(() {
+          emit(AudioPlaying());  // Replay uchun listener orqali yangilang
         });
-
-        // Visualize the waveform (Placeholder)
-        await _updateWaveform();
-
-      } catch (e) {
-        emit(AudioError(e.toString()));
+      } catch (err) {
+        emit(AudioError(err.toString()));
       }
     }
   }
 
-  /// Pause audio playback
+
+
+  /// Pause playback
   Future<void> pauseAudio() async {
-    await _audioPlayer.pause();
+    await playerController.pausePlayer();
     emit(AudioPaused());
   }
 
-  /// Stop and reset audio playback
-  Future<void> stopAudio() async {
-    await _audioPlayer.stop();
-    emit(AudioStoppedPlayback());
-  }
-
-  /// Dispose resources
-  void dispose() {
-    _recorder.dispose();
-    _audioPlayer.dispose();
-  }
-
-  /// Placeholder method to visualize waveform
-  Future<void> _updateWaveform() async {
-    if (_filePath != null) {
-      try {
-        final audioFile = File(_filePath!);
-        final bytes = await audioFile.readAsBytes();
-
-        // Placeholder to process and visualize audio bytes
-        // You can integrate a waveform visualization package here
-        // like flutter_waveform or custom rendering.
-        emit(AudioWaveformUpdated(bytes));
-
-      } catch (e) {
-        emit(AudioError('Unable to load waveform'));
-      }
-    }
+  /// Refresh UI recording components
+  void refreshWave() {
+    if (isRecording) recorderController.refresh();
   }
 }
