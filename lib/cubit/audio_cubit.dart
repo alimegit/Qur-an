@@ -38,36 +38,41 @@ class AudioCubit extends Cubit<AudioState> {
     }
   }
 
-  /// Stop recording audio
   Future<void> stopRecording() async {
-    try {
-      await recorderController.stop();
-      isRecording = false;
-      emit(AudioStopped(filePath: path));
-    } catch (e) {
-      emit(AudioError('Failed to stop recording: $e'));
+    final path = await recorderController.stop(); // Ensure this returns a valid path
+    if (path != null) {
+      playerController.preparePlayer(
+        path: path,
+        shouldExtractWaveform: true, // Extract waveform data
+      );
+      emit(AudioStopped());
     }
   }
+
 
   /// Play recorded audio
   bool _isPlaying = false;  // Playback holatini saqlash uchun private variable
 
 // AudioCubit.dart
   Future<void> playRecording() async {
-    if (path != null && File(path!).existsSync()) {
-      try {
-        await playerController.preparePlayer(path: path!);
-        await playerController.startPlayer();
+    if (path == null) {
+      emit(AudioError("Fayl yo‘q: Path qiymati null"));
+      return;
+    }
 
-        _isPlaying = true;
-        emit(AudioPlaying());  // UI-ni yangilash
+    if (!File(path!).existsSync()) {
+      emit(AudioError("Fayl mavjud emas: $path"));
+      return;
+    }
 
-        playerController.addListener(() {
-          emit(AudioPlaying());  // Replay uchun listener orqali yangilang
-        });
-      } catch (err) {
-        emit(AudioError(err.toString()));
-      }
+    try {
+      await playerController.preparePlayer(path: path!);
+      await playerController.startPlayer();
+      _isPlaying = true;
+      emit(AudioPlaying());
+      print("Audio o‘ynatilmoqda");
+    } catch (err) {
+      emit(AudioError(err.toString()));
     }
   }
 
@@ -83,4 +88,26 @@ class AudioCubit extends Cubit<AudioState> {
   void refreshWave() {
     if (isRecording) recorderController.refresh();
   }
+  /// Delete recorded audio file
+  Future<void> deleteRecording() async {
+    if (path == null) {
+      emit(AudioError("Fayl yo‘q: Path qiymati null"));
+      return;
+    }
+
+    try {
+      final audioFile = File(path!);
+      if (await audioFile.exists()) {
+        await audioFile.delete();  // Faylni o‘chirish
+        path = null;  // path ni null ga qo‘ying
+        emit(AudioDeleted());  // UI ga notification yuboring
+        print("Audio fayli o‘chirildi.");
+      } else {
+        emit(AudioError("Fayl topilmadi"));
+      }
+    } catch (e) {
+      emit(AudioError('Failed to delete recording: $e'));
+    }
+  }
+
 }
