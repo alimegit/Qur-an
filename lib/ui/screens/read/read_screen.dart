@@ -21,148 +21,170 @@ class _ReadScreenState extends State<ReadScreen> {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => AudioCubit(),
-      child: BlocBuilder<AudioCubit, AudioState>(
-        builder: (context, state) {
-          return Scaffold(
-            body: Column(
-              children: [
-                const AppMainAppbar(
-                  text: "Fotiha surasini qiroat qilish",
-                  onBack: true,
-                ),
-                Center(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(AppImages.imgSurahAlFatih,
-                          width: 343.w, height: 463.h),
-                     Column(
-                       children: [
-                         SizedBox(
-                           height: 100.h,
-                           child: _buildDynamicContent(state, context),
-                         ),
-                         SizedBox(height: 18.h),
-                         Visibility(
-                           visible: state is! AudioPlaying && state is !AudioStopped,
-                           child: GestureDetector(
-                             onTap: () {
-                               if (state is AudioRecording) {
-                                 context
-                                     .read<AudioCubit>()
-                                     .stopRecording();
-                               } else if (state is AudioStopped) {
-                                 context
-                                     .read<AudioCubit>()
-                                     .playRecording();
-                               } else {
-                                 context
-                                     .read<AudioCubit>()
-                                     .startRecording();
-                               }
-                             },
-                             child: Container(
-                               height: 88,
-                               width: 88,
-                               decoration: const BoxDecoration(
-                                 shape: BoxShape.circle,
-                                 color: AppColors.learnMainColor,
-                               ),
-                               child: Center(
-                                 child: SvgPicture.asset(
-                                   state is AudioRecording
-                                       ? AppImages.icStop
-                                       : AppImages.icMicrophone,
-                                   width: 13.5.w,
-                                 ),
-                               ),
-                             ),
-                           ),
-                         ),
-                       ],
-                     )
-                    ],
+      child: BlocListener<AudioCubit, AudioState>(
+        listener: (context, state) {},
+        child: BlocBuilder<AudioCubit, AudioState>(
+          builder: (context, state) {
+            return Scaffold(
+              body: Column(
+                children: [
+                  const AppMainAppbar(
+                    text: "Fotiha surasini qiroat qilish",
+                    onBack: true,
                   ),
-                ),
-              ],
-            ),
-            bottomNavigationBar: state is AudioStopped || state is AudioPlaying
-                ? Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.learnWhite,
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(33),
-                        topLeft: Radius.circular(33),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(8.w, 4.h, 8.w, 33.h),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              context.read<AudioCubit>().playRecording();
-                            },
-                            child: Container(
-                              height: 64,
-                              width: 64,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.scaffoldColor,
-                              ),
-                              child: Center(
-                                child: SvgPicture.asset(
-                                  AppImages.icPlay,
-                                  width: 24.w,
+                  Center(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          AppImages.imgSurahAlFatih,
+                          width: 343.w,
+                          height: 463.h,
+                        ),
+                        Column(
+                          children: [
+                            SizedBox(
+                              height: 100.h,
+                              child: _buildDynamicContent(state, context),
+                            ),
+                            SizedBox(height: 18.h),
+                            Visibility(
+                              visible: state is! AudioPlaying &&
+                                  state is! AudioStopped &&
+                                  state is! AudioPaused,
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (state is AudioRecording) {
+                                    context.read<AudioCubit>().stopRecording();
+                                  } else if (state is AudioStopped) {
+                                    context.read<AudioCubit>().playRecording();
+                                  } else {
+                                    context.read<AudioCubit>().startRecording();
+                                  }
+                                },
+                                child: Container(
+                                  height: 88,
+                                  width: 88,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.learnMainColor,
+                                  ),
+                                  child: Center(
+                                    child: SvgPicture.asset(
+                                      state is AudioRecording
+                                          ? AppImages.icStop
+                                          : AppImages.icMicrophone,
+                                      width: 13.5.w,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w),
-                            child: GestureDetector(
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              bottomNavigationBar: state is AudioStopped ||
+                      state is AudioPlaying ||
+                      state is AudioPaused
+                  ? Container(
+                      decoration: const BoxDecoration(
+                        color: AppColors.learnWhite,
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(33),
+                          topLeft: Radius.circular(33),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(8.w, 4.h, 8.w, 33.h),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            GestureDetector(
                               onTap: () {
-                                context.read<AudioCubit>().deleteRecording();
+                                if (state is! AudioPlaying) {
+                                  context.read<AudioCubit>().playRecording();
+                                } else {
+                                  context.read<AudioCubit>().pauseAudio();
+                                }
                               },
                               child: Container(
-                                width: 223.w,
-                                height: 64.h,
-                                decoration: BoxDecoration(
-                                    color: AppColors.learnMainColor,
-                                    borderRadius: BorderRadius.circular(64.r)),
-                                child: const Center(
-                                  child: Text("Yuborish",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
-                                          color: AppColors.learnWhite)),
+                                height: 64,
+                                width: 64,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.scaffoldColor,
+                                ),
+                                child: Center(
+                                  child: SvgPicture.asset(
+                                    state is! AudioPlaying
+                                        ? AppImages.icPlay
+                                        : AppImages.icStop,
+                                    width: 24.w,
+                                    colorFilter: const ColorFilter.mode(
+                                        AppColors.learnMainColor,
+                                        BlendMode.srcIn),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          Container(
-                            height: 64,
-                            width: 64,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.scaffoldColor,
-                            ),
-                            child: Center(
-                              child: SvgPicture.asset(
-                                AppImages.icDelete,
-                                width: 24.w,
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w),
+                              child: GestureDetector(
+                                onTap: () {},
+                                child: Container(
+                                  width: 223.w,
+                                  height: 64.h,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.learnMainColor,
+                                    borderRadius: BorderRadius.circular(64.r),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      "Yuborish",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                        color: AppColors.learnWhite,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            GestureDetector(
+                              onTap: () {
+                                if (state is! AudioPlaying) {
+                                  context.read<AudioCubit>().deleteRecording();
+                                }
+                              },
+                              child: Container(
+                                height: 64,
+                                width: 64,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.scaffoldColor,
+                                ),
+                                child: Center(
+                                  child: SvgPicture.asset(
+                                    AppImages.icDelete,
+                                    width: 24.w,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          );
-        },
+                    )
+                  : const SizedBox.shrink(),
+            );
+          },
+        ),
       ),
     );
   }
@@ -173,16 +195,15 @@ class _ReadScreenState extends State<ReadScreen> {
         child: Column(
           children: [
             Text(
-              "00:23",
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: AppColors.textColor,
-              ),
+              context.read<AudioCubit>().recordingDurationFormatted,
+              style: TextStyle(fontSize: 18.sp, color: AppColors.textColor),
             ),
           ],
         ),
       );
-    } else if (state is AudioStopped || state is AudioPlaying) {
+    } else if (state is AudioStopped ||
+        state is AudioPlaying ||
+        state is AudioPaused) {
       final audioCubit = context.read<AudioCubit>();
       return Column(
         children: [
@@ -208,13 +229,10 @@ class _ReadScreenState extends State<ReadScreen> {
               ),
             ),
           ),
-          const Text(
-            "00:59",
-            style: TextStyle(
-                color: AppColors.textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w500),
-          )
+          Text(
+            audioCubit.playbackDurationFormatted,
+            style: const TextStyle(color: AppColors.textColor, fontSize: 14),
+          ),
         ],
       );
     } else {

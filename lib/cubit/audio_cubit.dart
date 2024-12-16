@@ -1,14 +1,20 @@
 import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bloc/bloc.dart';
-import 'package:learn_quran/cubit/audio_state.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:learn_quran/cubit/audio_state.dart';
+import 'dart:async';
 
 class AudioCubit extends Cubit<AudioState> {
   late final RecorderController recorderController;
   late final PlayerController playerController;
   String? path;
   bool isRecording = false;
+  bool _isPlaying = false;
+  StreamSubscription? _playerSubscription;
+  Duration _recordingDuration = Duration.zero;
+  Duration _playbackDuration = Duration.zero;
+  late Timer _timer;
 
   AudioCubit() : super(AudioInitial()) {
     _initializeControllers();
@@ -24,7 +30,6 @@ class AudioCubit extends Cubit<AudioState> {
     playerController = PlayerController();
   }
 
-  /// Start recording audio
   Future<void> startRecording() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -32,6 +37,7 @@ class AudioCubit extends Cubit<AudioState> {
 
       await recorderController.record(path: path);
       isRecording = true;
+      _startRecordingTimer();
       emit(AudioRecording());
     } catch (e) {
       emit(AudioError('Failed to start recording: $e'));
@@ -39,75 +45,111 @@ class AudioCubit extends Cubit<AudioState> {
   }
 
   Future<void> stopRecording() async {
-    final path = await recorderController.stop(); // Ensure this returns a valid path
-    if (path != null) {
-      playerController.preparePlayer(
-        path: path,
-        shouldExtractWaveform: true, // Extract waveform data
-      );
+    final recordedPath = await recorderController.stop();
+    if (recordedPath != null) {
+      playerController.preparePlayer(path: recordedPath, shouldExtractWaveform: true);
+      _stopTimer();
       emit(AudioStopped());
     }
   }
 
-
-  /// Play recorded audio
-  bool _isPlaying = false;  // Playback holatini saqlash uchun private variable
-
-// AudioCubit.dart
   Future<void> playRecording() async {
-    if (path == null) {
-      emit(AudioError("Fayl yo‘q: Path qiymati null"));
+    if (path == null || !File(path!).existsSync()) {
+      emit(AudioError(path == null ? "Fayl yo‘q: Path qiymati null" : "Fayl mavjud emas: $path"));
       return;
     }
-
-    if (!File(path!).existsSync()) {
-      emit(AudioError("Fayl mavjud emas: $path"));
-      return;
-    }
-
     try {
       await playerController.preparePlayer(path: path!);
       await playerController.startPlayer();
       _isPlaying = true;
+      _startPlaybackTimer();
       emit(AudioPlaying());
-      print("Audio o‘ynatilmoqda");
+      _playerSubscription?.cancel();
+      _playerSubscription = playerController.onCompletion.listen((event) {
+        _onPlaybackComplete();
+      });
     } catch (err) {
       emit(AudioError(err.toString()));
     }
   }
 
-
-
-  /// Pause playback
   Future<void> pauseAudio() async {
     await playerController.pausePlayer();
+    _stopTimer();
     emit(AudioPaused());
   }
 
-  /// Refresh UI recording components
   void refreshWave() {
     if (isRecording) recorderController.refresh();
   }
-  /// Delete recorded audio file
+
   Future<void> deleteRecording() async {
     if (path == null) {
       emit(AudioError("Fayl yo‘q: Path qiymati null"));
       return;
     }
-
     try {
       final audioFile = File(path!);
       if (await audioFile.exists()) {
-        await audioFile.delete();  // Faylni o‘chirish
-        path = null;  // path ni null ga qo‘ying
-        emit(AudioDeleted());  // UI ga notification yuboring
-        print("Audio fayli o‘chirildi.");
+        await audioFile.delete();
+        path = null;
+        emit(AudioStopped());
+        emit(AudioDeleted());
+        _playbackDuration = Duration.zero;
+        _recordingDuration = Duration.zero;
+        print("Audio fayli o'chirildi.");
       } else {
-        emit(AudioError("Fayl topilmadi"));
+        emit(AudioError("Fayl topilmadi: $path"));
       }
     } catch (e) {
       emit(AudioError('Failed to delete recording: $e'));
     }
   }
 
+  void _onPlaybackComplete() {
+    _isPlaying = false;
+    _stopTimer();
+    emit(AudioStopped());
+  }
+
+  void _startRecordingTimer() {
+    _recordingDuration = Duration.zero;
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      _recordingDuration = _recordingDuration + const Duration(milliseconds: 100);
+      emit(AudioRecording());
+    });
+  }
+
+  void _startPlaybackTimer() {
+    _playbackDuration = Duration.zero;
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      _playbackDuration = _playbackDuration + const Duration(milliseconds: 100);
+      emit(AudioPlaying());
+    });
+  }
+
+  void _stopTimer() {
+    _timer.cancel();
+  }
+
+  String getFormattedDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    final milliseconds = (duration.inMilliseconds.remainder(1000) ~/ 100);
+    return "$minutes:$seconds.$milliseconds";
+  }
+
+  String get recordingDurationFormatted => getFormattedDuration(_recordingDuration);
+  String get playbackDurationFormatted => getFormattedDuration(_playbackDuration);
+
+  Duration get recordingDuration => _recordingDuration;
+  Duration get playbackDuration => _playbackDuration;
+
+  @override
+  Future<void> close() {
+    _playerSubscription?.cancel();
+    _timer.cancel();
+    return super.close();
+  }
 }
