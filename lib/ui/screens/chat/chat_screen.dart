@@ -42,7 +42,6 @@ class ChatStartScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(8, 8, 31, 20),
                       child: Container(
                         width: 312.w,
-                        height: 233.h,
                         decoration: BoxDecoration(
                           color: AppColors.scaffoldColor,
                           borderRadius: BorderRadius.circular(10.r),
