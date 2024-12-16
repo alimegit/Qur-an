@@ -14,6 +14,7 @@ class AudioPlaying extends AudioState {}
 
 class AudioPaused extends AudioState {}
 class AudioDeleted extends AudioState {}
+class AudioSaved extends AudioState {}
 
 class AudioFilePicked extends AudioState {
   final String path;

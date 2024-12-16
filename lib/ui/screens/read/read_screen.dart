@@ -22,7 +22,11 @@ class _ReadScreenState extends State<ReadScreen> {
     return BlocProvider(
       create: (context) => AudioCubit(),
       child: BlocListener<AudioCubit, AudioState>(
-        listener: (context, state) {},
+        listener: (context, state) {
+          if(state is AudioSaved){
+            Navigator.pop(context);
+          }
+        },
         child: BlocBuilder<AudioCubit, AudioState>(
           builder: (context, state) {
             return Scaffold(
@@ -135,7 +139,9 @@ class _ReadScreenState extends State<ReadScreen> {
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8.w),
                               child: GestureDetector(
-                                onTap: () {},
+                                onTap: () {
+                                  context.read<AudioCubit>().sendRecording();
+                                },
                                 child: Container(
                                   width: 223.w,
                                   height: 64.h,

@@ -1,7 +1,11 @@
+import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:learn_quran/cubit/audio_cubit.dart';
 import 'package:learn_quran/ui/common_widgets/app_main_appBar.dart';
+import 'package:learn_quran/ui/screens/chat/youtube_player_screen.dart';
 import 'package:learn_quran/util/app_colors.dart';
 import 'package:learn_quran/util/app_constants.dart';
 import 'package:learn_quran/util/app_images.dart';
@@ -30,39 +34,77 @@ class ChatStartScreen extends StatelessWidget {
                 color: AppColors.learnWhite,
                 borderRadius: BorderRadius.circular(16.r),
               ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 31, 347),
-                    child: Container(
-                      width: 312.w,
-                      height: 233.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.scaffoldColor,
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Image.asset(AppImages.imgDomla),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Fotiha surasida yo‘l qo‘yilishi mumkin bo‘lgan xatolar",
-                              textAlign: TextAlign.start,
-                              maxLines: 2,
-                              style: TextStyle(
-                                color: AppColors.textColor,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w500,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 31, 20),
+                      child: Container(
+                        width: 312.w,
+                        height: 233.h,
+                        decoration: BoxDecoration(
+                          color: AppColors.scaffoldColor,
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: GestureDetector(
+                          onTap: (){
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const YoutubePlayerScreen(
+                                    // videoUrl: 'https://youtu.be/PLHddf-1MHY',
+                                  ),
+                                ),
+                              );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Image.asset(AppImages.imgDomla),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  "Fotiha surasida yo‘l qo‘yilishi mumkin bo‘lgan xatolar",
+                                  textAlign: TextAlign.start,
+                                  maxLines: 2,
+                                  style: TextStyle(
+                                    color: AppColors.textColor,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding:  EdgeInsets.only(left: 50.w,right: 20),
+                      child: Container(
+                        height: 82,
+                        decoration: BoxDecoration(
+                          color: AppColors.cF5F7F9,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: AudioFileWaveforms(
+                          size: Size(double.infinity, 40.h),
+                          playerController: context.read<AudioCubit>().playerController,
+                          enableSeekGesture: true,
+                          waveformType: WaveformType.fitWidth,
+                          playerWaveStyle: const PlayerWaveStyle(
+                            fixedWaveColor: AppColors.cBAC2E2,
+                            liveWaveColor: AppColors.c4683FA,
+                            waveCap: StrokeCap.round,
+                            spacing: 6.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                
+                  ],
+                ),
               ),
             ),
           ),
