@@ -45,6 +45,9 @@ dependencies:
   record: ^5.2.0
   just_audio: ^0.9.42
   audio_waveforms: ^1.2.0
+  youtube_player_flutter: ^8.1.2
+  shared_preferences: ^2.3.3
+  flutter_inappwebview: ^5.7.2
 
 dev_dependencies:
   flutter_test:

@@ -24,7 +24,7 @@ class _ReadScreenState extends State<ReadScreen> {
       child: BlocListener<AudioCubit, AudioState>(
         listener: (context, state) {
           if(state is AudioSaved){
-            Navigator.pop(context);
+            // Navigator.pop(context);
           }
         },
         child: BlocBuilder<AudioCubit, AudioState>(
@@ -141,6 +141,7 @@ class _ReadScreenState extends State<ReadScreen> {
                               child: GestureDetector(
                                 onTap: () {
                                   context.read<AudioCubit>().sendRecording();
+                                  Navigator.pop(context);
                                 },
                                 child: Container(
                                   width: 223.w,

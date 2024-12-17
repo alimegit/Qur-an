@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:bloc/bloc.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:learn_quran/cubit/audio_state.dart';
+import 'package:learn_quran/services/storage_repository.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 
 class AudioCubit extends Cubit<AudioState> {
@@ -16,11 +17,12 @@ class AudioCubit extends Cubit<AudioState> {
   Duration _playbackDuration = Duration.zero;
   late Timer _timer;
 
+  List<String> savedAudioPaths = [];
+
   AudioCubit() : super(AudioInitial()) {
     _initializeControllers();
   }
 
-  // Recorder va playerni initialize qilish
   void _initializeControllers() {
     recorderController = RecorderController()
       ..androidEncoder = AndroidEncoder.aac
@@ -31,12 +33,10 @@ class AudioCubit extends Cubit<AudioState> {
     playerController = PlayerController();
   }
 
-  // Recordingni boshlash
   Future<void> startRecording() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      path =
-          "${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
+      path = "${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
 
       await recorderController.record(path: path);
       isRecording = true;
@@ -47,34 +47,16 @@ class AudioCubit extends Cubit<AudioState> {
     }
   }
 
-  // Recordingni to'xtatish
   Future<void> stopRecording() async {
-    // Stop the recording, but don't save the file
     await recorderController.stop();
     _stopTimer();
     emit(AudioStopped());
   }
 
-  // Audio faylini saqlash va yuborish
   Future<void> sendRecording() async {
-    if (path == null || !File(path!).existsSync()) {
-      emit(AudioError("Fayl mavjud emas: $path"));
-      return;
-    }
-    try {
-      // Audio faylini saqlash
-      String savedPath = await saveAudioToStorage(path!);
-      print("Audio fayli saqlandi: $savedPath");
-
-      // Emit AudioStopped with saved file path
-      emit(AudioStopped(filePath: savedPath));
-      emit(AudioSaved());
-    } catch (e) {
-      emit(AudioError('Failed to save recording: $e'));
-    }
+ emit(AudioInitial());
   }
 
-  // Audio faylini o'qish va tinglash
   Future<void> playRecording() async {
     if (path == null || !File(path!).existsSync()) {
       emit(AudioError(path == null
@@ -97,19 +79,12 @@ class AudioCubit extends Cubit<AudioState> {
     }
   }
 
-  // Audio faylini pauzaga qo'yish
   Future<void> pauseAudio() async {
     await playerController.pausePlayer();
     _stopTimer();
     emit(AudioPaused());
   }
 
-  // Wav uchun yangilash
-  void refreshWave() {
-    if (isRecording) recorderController.refresh();
-  }
-
-  // Recordingni o'chirish
   Future<void> deleteRecording() async {
     if (path == null) {
       emit(AudioError("Fayl yo‘q: Path qiymati null"));
@@ -133,48 +108,47 @@ class AudioCubit extends Cubit<AudioState> {
     }
   }
 
-  // Audio playback tugallanganda
   void _onPlaybackComplete() {
     _isPlaying = false;
     _stopTimer();
     emit(AudioStopped());
   }
 
-  // Recording vaqtini hisoblash
   void _startRecordingTimer() {
     _recordingDuration = Duration.zero;
     _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      _recordingDuration =
-          _recordingDuration + const Duration(milliseconds: 100);
+      _recordingDuration += const Duration(milliseconds: 100);
       emit(AudioRecording());
     });
   }
 
-  // Playback vaqtini hisoblash
   void _startPlaybackTimer() {
     _playbackDuration = Duration.zero;
     _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      _playbackDuration = _playbackDuration + const Duration(milliseconds: 100);
+      _playbackDuration += const Duration(milliseconds: 100);
       emit(AudioPlaying());
     });
   }
 
-  // Timerni to'xtatish
   void _stopTimer() {
     _timer.cancel();
   }
 
-  // Audio faylini saqlash
   Future<String> saveAudioToStorage(String path) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final fileName = "recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
       final newPath = "${directory.path}/$fileName";
-      final file = File(newPath);
       final recordedFile = File(path);
 
       if (await recordedFile.exists()) {
-        await recordedFile.copy(newPath);
+        final newFile = await recordedFile.copy(newPath);
+
+        // Audio faylini ro'yxatga qo'shish
+        final audioList = StorageRepository.getList('audioPaths').toList();
+        audioList.add(newFile.path);
+        await StorageRepository.putList('audioPaths', audioList);
+
         return newPath;
       } else {
         throw Exception("Original audio fayli mavjud emas.");
@@ -182,6 +156,9 @@ class AudioCubit extends Cubit<AudioState> {
     } catch (e) {
       throw Exception('Audio faylini saqlashda xatolik yuz berdi: $e');
     }
+  }
+  List<String> getSavedAudioPaths() {
+    return savedAudioPaths;
   }
 
   String getFormattedDuration(Duration duration) {
@@ -192,14 +169,9 @@ class AudioCubit extends Cubit<AudioState> {
     return "$minutes:$seconds.$milliseconds";
   }
 
-  String get recordingDurationFormatted =>
-      getFormattedDuration(_recordingDuration);
-
-  String get playbackDurationFormatted =>
-      getFormattedDuration(_playbackDuration);
-
+  String get recordingDurationFormatted => getFormattedDuration(_recordingDuration);
+  String get playbackDurationFormatted => getFormattedDuration(_playbackDuration);
   Duration get recordingDuration => _recordingDuration;
-
   Duration get playbackDuration => _playbackDuration;
 
   @override

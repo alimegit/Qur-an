@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:learn_quran/cubit/audio_cubit.dart';
+import 'package:learn_quran/services/storage_repository.dart';
 import 'package:learn_quran/ui/router.dart';
 import 'package:learn_quran/util/app_colors.dart';
 import 'package:learn_quran/util/app_constants.dart';
 
-void main() {
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp, // Faqat portret yuqoriga
+    DeviceOrientation.portraitDown, // Faqat portret pastga
+  ]).then((_) {
+    runApp(MyApp());
+  });
 }
 
 class MyApp extends StatefulWidget {
