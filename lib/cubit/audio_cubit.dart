@@ -16,7 +16,6 @@ class AudioCubit extends Cubit<AudioState> {
   Duration _recordingDuration = Duration.zero;
   Duration _playbackDuration = Duration.zero;
   late Timer _timer;
-
   List<String> savedAudioPaths = [];
 
   AudioCubit() : super(AudioInitial()) {
@@ -37,7 +36,6 @@ class AudioCubit extends Cubit<AudioState> {
     try {
       final directory = await getApplicationDocumentsDirectory();
       path = "${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
-
       await recorderController.record(path: path);
       isRecording = true;
       _startRecordingTimer();
@@ -53,15 +51,20 @@ class AudioCubit extends Cubit<AudioState> {
     emit(AudioStopped());
   }
 
-  Future<void> sendRecording() async {
- emit(AudioInitial());
+  Future<void> saveRecordingToStorage() async {
+    if (path != null) {
+      if (!savedAudioPaths.contains(path)) {
+        savedAudioPaths.add(path!);
+        await StorageRepository.putList("audioPaths", savedAudioPaths);
+        emit(AudioSaved());
+      }
+    }
   }
+
 
   Future<void> playRecording() async {
     if (path == null || !File(path!).existsSync()) {
-      emit(AudioError(path == null
-          ? "Fayl yo‘q: Path qiymati null"
-          : "Fayl mavjud emas: $path"));
+      emit(AudioError(path == null ? "Fayl yo‘q: Path qiymati null" : "Fayl mavjud emas: $path"));
       return;
     }
     try {
@@ -99,7 +102,6 @@ class AudioCubit extends Cubit<AudioState> {
         emit(AudioDeleted());
         _playbackDuration = Duration.zero;
         _recordingDuration = Duration.zero;
-        print("Audio fayli o'chirildi.");
       } else {
         emit(AudioError("Fayl topilmadi: $path"));
       }
@@ -132,33 +134,6 @@ class AudioCubit extends Cubit<AudioState> {
 
   void _stopTimer() {
     _timer.cancel();
-  }
-
-  Future<String> saveAudioToStorage(String path) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = "recording_${DateTime.now().millisecondsSinceEpoch}.m4a";
-      final newPath = "${directory.path}/$fileName";
-      final recordedFile = File(path);
-
-      if (await recordedFile.exists()) {
-        final newFile = await recordedFile.copy(newPath);
-
-        // Audio faylini ro'yxatga qo'shish
-        final audioList = StorageRepository.getList('audioPaths').toList();
-        audioList.add(newFile.path);
-        await StorageRepository.putList('audioPaths', audioList);
-
-        return newPath;
-      } else {
-        throw Exception("Original audio fayli mavjud emas.");
-      }
-    } catch (e) {
-      throw Exception('Audio faylini saqlashda xatolik yuz berdi: $e');
-    }
-  }
-  List<String> getSavedAudioPaths() {
-    return savedAudioPaths;
   }
 
   String getFormattedDuration(Duration duration) {

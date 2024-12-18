@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learn_quran/util/app_colors.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class YoutubePlayerScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class _YoutubePlayerScreenState extends State<YoutubePlayerScreen> {
   void initState() {
     super.initState();
     _controller = YoutubePlayerController(
-      initialVideoId: 'dQw4w9WgXcQ',
+      initialVideoId: 'PLHddf-1MHY',
       flags: const YoutubePlayerFlags(
         autoPlay: false,
         loop: false,
@@ -33,8 +34,8 @@ class _YoutubePlayerScreenState extends State<YoutubePlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Video Title'),
-        backgroundColor: Colors.red,
+        title: const Text('Al-Fatih video'),
+        backgroundColor: AppColors.learnMainColor,
       ),
       body: Column(
         children: [

@@ -10,11 +10,12 @@ import 'package:learn_quran/util/app_constants.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  StorageRepository.getInstance();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp, // Faqat portret yuqoriga
     DeviceOrientation.portraitDown, // Faqat portret pastga
   ]).then((_) {
-    runApp(MyApp());
+    runApp(const MyApp());
   });
 }
 

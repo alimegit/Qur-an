@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:learn_quran/cubit/audio_cubit.dart';
 import 'package:learn_quran/cubit/audio_state.dart';
+import 'package:learn_quran/services/storage_repository.dart';
 import 'package:learn_quran/ui/common_widgets/app_main_appBar.dart';
 import 'package:learn_quran/ui/screens/chat/youtube_player_screen.dart';
 import 'package:learn_quran/util/app_colors.dart';
@@ -20,6 +22,34 @@ class ChatStartScreen extends StatefulWidget {
 }
 
 class _ChatStartScreenState extends State<ChatStartScreen> {
+  List<String> audioPaths = [];
+  List<PlayerController> playerController = [];
+  bool isPlaying = false;
+  StreamSubscription? _playerSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        audioPaths = StorageRepository.getList('audioPaths');
+        print("12345$audioPaths");
+        playerController = audioPaths.map((_) => PlayerController()).toList();
+        for (int i = 0; i < audioPaths.length; i++) {
+          playerController[i].preparePlayer(path: audioPaths[i]);
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final controller in playerController) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AudioCubit, AudioState>(
@@ -47,7 +77,6 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                        // Youtube Player Section
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 8, 31, 20),
                           child: GestureDetector(
@@ -56,7 +85,7 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const YoutubePlayerScreen(),
+                                      const YoutubePlayerScreen(),
                                 ),
                               );
                             },
@@ -88,32 +117,74 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                             ),
                           ),
                         ),
-                        // Audio Waveform and Control Buttons
-                        Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Container(
-                                height: 43.h,
-                                decoration: BoxDecoration(
-                                  color: AppColors.learnWhite,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: AudioFileWaveforms(
-                                  size: Size(double.infinity, 40.h),
-                                  playerController: context.read<AudioCubit>().playerController,
-                                  enableSeekGesture: true,
-                                  waveformType: WaveformType.fitWidth,
-                                  playerWaveStyle: const PlayerWaveStyle(
-                                    fixedWaveColor: AppColors.cBAC2E2,
-                                    liveWaveColor: AppColors.c4683FA,
-                                    waveCap: StrokeCap.round,
-                                    spacing: 6.0,
+                        ListView.builder(
+                          shrinkWrap: true,
+                          itemCount:
+                              audioPaths.isNotEmpty ? audioPaths.length : 0,
+                          itemBuilder: (context, index) {
+                            if (audioPaths.isNotEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 40, bottom: 8, right: 16),
+                                child: Container(
+                                  height: 82.h,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cF5F7F9,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                )
-                              ),
-                            ),
-                          ],
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        margin:
+                                            const EdgeInsets.only(right: 10),
+                                        decoration: const BoxDecoration(
+                                            color: AppColors.c4683FA,
+                                            shape: BoxShape.circle),
+                                        child: IconButton(
+                                          onPressed: () {
+                                            _playerSubscription =
+                                                playerController.onCompletion
+                                                    .listen((event) {
+                                              setState(() {
+                                                isPlaying = false;
+                                              });
+                                            });
+                                            setState(() {
+                                              isPlaying = !isPlaying;
+                                            });
+                                            playerController[index]
+                                                .startPlayer();
+                                          },
+                                          icon: Icon(
+                                            isPlaying
+                                                ? Icons.play_arrow
+                                                : Icons.stop,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      AudioFileWaveforms(
+                                        size: Size(200.w, 40.h),
+                                        playerController:
+                                            playerController[index],
+                                        enableSeekGesture: true,
+                                        waveformType: WaveformType.fitWidth,
+                                        playerWaveStyle: const PlayerWaveStyle(
+                                          fixedWaveColor: AppColors.cBAC2E2,
+                                          liveWaveColor: AppColors.c4683FA,
+                                          waveCap: StrokeCap.round,
+                                          spacing: 6.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox();
+                          },
                         ),
                       ],
                     ),
@@ -150,7 +221,7 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(48.r),
                         onTap: () {
-                        Navigator.pushNamed(context, readScreenRoute);
+                          Navigator.pushNamed(context, readScreenRoute);
                         },
                         child: Container(
                           height: 40.h,
@@ -173,7 +244,8 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                                 ),
                               ),
                               Padding(
-                                padding: EdgeInsets.only(right: 16.w, left: 8.w),
+                                padding:
+                                    EdgeInsets.only(right: 16.w, left: 8.w),
                                 child: SvgPicture.asset(AppImages.icToward),
                               ),
                             ],

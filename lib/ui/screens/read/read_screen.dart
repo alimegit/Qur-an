@@ -7,6 +7,7 @@ import 'package:learn_quran/cubit/audio_cubit.dart';
 import 'package:learn_quran/cubit/audio_state.dart';
 import 'package:learn_quran/ui/common_widgets/app_main_appBar.dart';
 import 'package:learn_quran/util/app_colors.dart';
+import 'package:learn_quran/util/app_constants.dart';
 import 'package:learn_quran/util/app_images.dart';
 
 class ReadScreen extends StatefulWidget {
@@ -23,8 +24,8 @@ class _ReadScreenState extends State<ReadScreen> {
       create: (context) => AudioCubit(),
       child: BlocListener<AudioCubit, AudioState>(
         listener: (context, state) {
-          if(state is AudioSaved){
-            // Navigator.pop(context);
+          if (state is AudioSaved) {
+            Navigator.pushNamed(context, chatScreenRoute);
           }
         },
         child: BlocBuilder<AudioCubit, AudioState>(
@@ -140,8 +141,9 @@ class _ReadScreenState extends State<ReadScreen> {
                               padding: EdgeInsets.symmetric(horizontal: 8.w),
                               child: GestureDetector(
                                 onTap: () {
-                                  context.read<AudioCubit>().sendRecording();
-                                  Navigator.pop(context);
+                                  context
+                                      .read<AudioCubit>()
+                                      .saveRecordingToStorage();
                                 },
                                 child: Container(
                                   width: 223.w,
