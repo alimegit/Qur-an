@@ -62,7 +62,6 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                             },
                             child: Container(
                               width: 312.w,
-                              height: 233.h,
                               decoration: BoxDecoration(
                                 color: AppColors.scaffoldColor,
                                 borderRadius: BorderRadius.circular(10.r),
