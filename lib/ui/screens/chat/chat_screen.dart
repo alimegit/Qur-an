@@ -25,7 +25,6 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
   List<String> audioPaths = [];
   List<PlayerController> playerController = [];
   bool isPlaying = false;
-  StreamSubscription? _playerSubscription;
 
   @override
   void initState() {
@@ -33,7 +32,6 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         audioPaths = StorageRepository.getList('audioPaths');
-        print("12345$audioPaths");
         playerController = audioPaths.map((_) => PlayerController()).toList();
         for (int i = 0; i < audioPaths.length; i++) {
           playerController[i].preparePlayer(path: audioPaths[i]);
@@ -144,21 +142,15 @@ class _ChatStartScreenState extends State<ChatStartScreen> {
                                             shape: BoxShape.circle),
                                         child: IconButton(
                                           onPressed: () {
-                                            _playerSubscription =
-                                                playerController.onCompletion
-                                                    .listen((event) {
-                                              setState(() {
-                                                isPlaying = false;
-                                              });
-                                            });
                                             setState(() {
                                               isPlaying = !isPlaying;
                                             });
-                                            playerController[index]
-                                                .startPlayer();
+                                            isPlaying?playerController[index]
+                                                .startPlayer():playerController[index]
+                                                .stopPlayer();
                                           },
                                           icon: Icon(
-                                            isPlaying
+                                            !isPlaying
                                                 ? Icons.play_arrow
                                                 : Icons.stop,
                                             color: Colors.white,
